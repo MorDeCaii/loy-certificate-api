@@ -13,32 +13,32 @@ type Consumer interface {
 }
 
 type consumer struct {
-	n 			uint64
-	events 		chan<- model.CertificateEvent
+	n      uint64
+	events chan<- model.CertificateEvent
 
-	repo		repo.EventRepo
+	repo repo.EventRepo
 
-	batchSize 	uint64
-	timeout		time.Duration
+	batchSize uint64
+	timeout   time.Duration
 
-	done 		chan bool
-	wg 			*sync.WaitGroup
+	done chan bool
+	wg   *sync.WaitGroup
 }
 
 type Config struct {
-	n 			uint64
-	events 		chan<- model.CertificateEvent
-	repo 		repo.EventRepo
-	batchSize 	uint64
-	timeout 	time.Duration
+	n         uint64
+	events    chan<- model.CertificateEvent
+	repo      repo.EventRepo
+	batchSize uint64
+	timeout   time.Duration
 }
 
-func NewConsumer(
-		n uint64,
-		batchSize uint64,
-		consumeTimeout time.Duration,
-		repo repo.EventRepo,
-		events chan<- model.CertificateEvent) Consumer {
+func NewDbConsumer(
+	n uint64,
+	batchSize uint64,
+	consumeTimeout time.Duration,
+	repo repo.EventRepo,
+	events chan<- model.CertificateEvent) Consumer {
 
 	wg := &sync.WaitGroup{}
 	done := make(chan bool)

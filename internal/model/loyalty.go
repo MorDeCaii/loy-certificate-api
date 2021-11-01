@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 type Certificate struct {
 	ID uint64
 }
@@ -18,8 +20,12 @@ const (
 )
 
 type CertificateEvent struct {
-	ID		uint64
-	Type	EventType
-	Status	EventStatus
-	Entity	*Certificate
+	ID     uint64
+	Type   EventType
+	Status EventStatus
+	Entity *Certificate
+}
+
+func (c *CertificateEvent) String() string {
+	return fmt.Sprintf("ID: %d", c.ID)
 }

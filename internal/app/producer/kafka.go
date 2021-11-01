@@ -1,6 +1,8 @@
 package producer
 
 import (
+	"fmt"
+	"github.com/Mordecaii/loy-certificate-api/internal/app/repo"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/sender"
 	"github.com/Mordecaii/loy-certificate-api/internal/model"
 	"github.com/gammazero/workerpool"
@@ -16,6 +18,7 @@ type Producer interface {
 type producer struct {
 	n       uint64
 	timeout time.Duration
+	repo    repo.EventRepo
 
 	sender sender.EventSender
 	events <-chan model.CertificateEvent
@@ -28,6 +31,7 @@ type producer struct {
 
 func NewKafkaProducer(
 	n uint64,
+	repo repo.EventRepo,
 	sender sender.EventSender,
 	events <-chan model.CertificateEvent,
 	workerPool *workerpool.WorkerPool,
@@ -38,6 +42,7 @@ func NewKafkaProducer(
 
 	return &producer{
 		n:          n,
+		repo:       repo,
 		sender:     sender,
 		events:     events,
 		workerPool: workerPool,
@@ -55,13 +60,12 @@ func (p *producer) Start() {
 				select {
 				case event := <-p.events:
 					if err := p.sender.Send(&event); err != nil {
-						p.workerPool.Submit(func() {
-							// ...
-						})
+						fmt.Printf("Error while sending event {%s}: %s\n", event.String(), err)
+						p.updateEvent(&event)
 					} else {
-						p.workerPool.Submit(func() {
-							// ...
-						})
+						fmt.Printf("Event {%s} successfully sent to Kafka\n", event.String())
+						p.cleanEvent(&event)
+
 					}
 				case <-p.done:
 					return
@@ -74,4 +78,22 @@ func (p *producer) Start() {
 func (p *producer) Close() {
 	close(p.done)
 	p.wg.Wait()
+}
+
+func (p *producer) cleanEvent(event *model.CertificateEvent) {
+	p.workerPool.Submit(func() {
+		err := p.repo.Remove([]uint64{event.ID})
+		if err != nil {
+			fmt.Printf("Error while cleaning event: %s\n", err)
+		}
+	})
+}
+
+func (p *producer) updateEvent(event *model.CertificateEvent) {
+	p.workerPool.Submit(func() {
+		err := p.repo.Unlock([]uint64{event.ID})
+		if err != nil {
+			fmt.Printf("Error while updating event: %s\n", err)
+		}
+	})
 }
