@@ -1,9 +1,9 @@
 package consumer
 
 import (
+	"context"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/repo"
 	"github.com/Mordecaii/loy-certificate-api/internal/model"
-	"sync"
 	"time"
 )
 
@@ -21,8 +21,8 @@ type consumer struct {
 	batchSize uint64
 	timeout   time.Duration
 
-	done chan bool
-	wg   *sync.WaitGroup
+	ctx    context.Context
+	cancel func()
 }
 
 type Config struct {
@@ -34,14 +34,14 @@ type Config struct {
 }
 
 func NewDbConsumer(
+	ctx context.Context,
 	n uint64,
 	batchSize uint64,
 	consumeTimeout time.Duration,
 	repo repo.EventRepo,
 	events chan<- model.CertificateEvent) Consumer {
 
-	wg := &sync.WaitGroup{}
-	done := make(chan bool)
+	consumerCtx, cancel := context.WithCancel(ctx)
 
 	return &consumer{
 		n:         n,
@@ -49,17 +49,14 @@ func NewDbConsumer(
 		timeout:   consumeTimeout,
 		repo:      repo,
 		events:    events,
-		wg:        wg,
-		done:      done,
+		ctx:       consumerCtx,
+		cancel:    cancel,
 	}
 }
 
 func (c *consumer) Start() {
 	for i := uint64(0); i < c.n; i++ {
-		c.wg.Add(1)
-
 		go func() {
-			defer c.wg.Done()
 			ticker := time.NewTicker(c.timeout)
 			for {
 				select {
@@ -71,7 +68,7 @@ func (c *consumer) Start() {
 					for _, event := range events {
 						c.events <- event
 					}
-				case <-c.done:
+				case <-c.ctx.Done():
 					return
 				}
 			}
@@ -80,6 +77,5 @@ func (c *consumer) Start() {
 }
 
 func (c *consumer) Close() {
-	close(c.done)
-	c.wg.Wait()
+	c.cancel()
 }

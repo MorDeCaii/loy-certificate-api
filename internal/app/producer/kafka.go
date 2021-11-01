@@ -1,12 +1,12 @@
 package producer
 
 import (
+	"context"
 	"fmt"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/repo"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/sender"
 	"github.com/Mordecaii/loy-certificate-api/internal/model"
 	"github.com/gammazero/workerpool"
-	"sync"
 	"time"
 )
 
@@ -25,11 +25,12 @@ type producer struct {
 
 	workerPool *workerpool.WorkerPool
 
-	wg   *sync.WaitGroup
-	done chan bool
+	ctx    context.Context
+	cancel func()
 }
 
 func NewKafkaProducer(
+	ctx context.Context,
 	n uint64,
 	repo repo.EventRepo,
 	sender sender.EventSender,
@@ -37,8 +38,7 @@ func NewKafkaProducer(
 	workerPool *workerpool.WorkerPool,
 ) Producer {
 
-	wg := &sync.WaitGroup{}
-	done := make(chan bool)
+	producerCtx, cancel := context.WithCancel(ctx)
 
 	return &producer{
 		n:          n,
@@ -46,16 +46,14 @@ func NewKafkaProducer(
 		sender:     sender,
 		events:     events,
 		workerPool: workerPool,
-		wg:         wg,
-		done:       done,
+		ctx:        producerCtx,
+		cancel:     cancel,
 	}
 }
 
 func (p *producer) Start() {
 	for i := uint64(0); i < p.n; i++ {
-		p.wg.Add(1)
 		go func() {
-			defer p.wg.Done()
 			for {
 				select {
 				case event := <-p.events:
@@ -67,7 +65,7 @@ func (p *producer) Start() {
 						p.cleanEvent(&event)
 
 					}
-				case <-p.done:
+				case <-p.ctx.Done():
 					return
 				}
 			}
@@ -76,8 +74,7 @@ func (p *producer) Start() {
 }
 
 func (p *producer) Close() {
-	close(p.done)
-	p.wg.Wait()
+	p.cancel()
 }
 
 func (p *producer) cleanEvent(event *model.CertificateEvent) {

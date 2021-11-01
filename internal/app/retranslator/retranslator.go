@@ -1,6 +1,7 @@
 package retranslator
 
 import (
+	"context"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/consumer"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/producer"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/repo"
@@ -36,17 +37,19 @@ type retranslator struct {
 	workerPool *workerpool.WorkerPool
 }
 
-func NewRetranslator(cfg Config) Retranslator {
+func NewRetranslator(ctx context.Context, cfg Config) Retranslator {
 	events := make(chan model.CertificateEvent, cfg.ChannelSize)
 	workerPool := workerpool.New(cfg.WorkerCount)
 
 	consumer := consumer.NewDbConsumer(
+		ctx,
 		cfg.ConsumerCount,
 		cfg.ConsumeSize,
 		cfg.ConsumeTimeout,
 		cfg.Repo,
 		events)
 	producer := producer.NewKafkaProducer(
+		ctx,
 		cfg.ProducerCount,
 		cfg.Repo,
 		cfg.Sender,

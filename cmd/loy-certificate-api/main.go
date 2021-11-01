@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/Mordecaii/loy-certificate-api/internal/app/retranslator"
 	"os"
 	"os/signal"
@@ -9,6 +10,7 @@ import (
 
 func main() {
 
+	ctx := context.Background()
 	sigs := make(chan os.Signal, 1)
 
 	cfg := retranslator.Config{
@@ -19,7 +21,7 @@ func main() {
 		WorkerCount:   2,
 	}
 
-	retranslator := retranslator.NewRetranslator(cfg)
+	retranslator := retranslator.NewRetranslator(ctx, cfg)
 	retranslator.Start()
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

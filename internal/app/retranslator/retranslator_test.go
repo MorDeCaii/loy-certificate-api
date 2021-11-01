@@ -1,6 +1,7 @@
 package retranslator
 
 import (
+	"context"
 	"errors"
 	"github.com/Mordecaii/loy-certificate-api/internal/mocks"
 	"github.com/Mordecaii/loy-certificate-api/internal/model"
@@ -16,6 +17,7 @@ func TestStart(t *testing.T) {
 
 	repo.EXPECT().Lock(gomock.Any()).AnyTimes()
 
+	ctx := context.Background()
 	cfg := Config{
 		ChannelSize:    512,
 		ConsumerCount:  2,
@@ -27,7 +29,7 @@ func TestStart(t *testing.T) {
 		Sender:         sender,
 	}
 
-	retranslator := NewRetranslator(cfg)
+	retranslator := NewRetranslator(ctx, cfg)
 	retranslator.Start()
 	time.Sleep(time.Second * 2)
 	retranslator.Close()
@@ -48,6 +50,7 @@ func TestLockRemove(t *testing.T) {
 	repo.EXPECT().Remove(gomock.Any()).Times(5)
 	repo.EXPECT().Unlock(gomock.Any()).Times(0)
 
+	ctx := context.Background()
 	cfg := Config{
 		ChannelSize:    512,
 		ConsumerCount:  2,
@@ -59,7 +62,7 @@ func TestLockRemove(t *testing.T) {
 		Sender:         sender,
 	}
 
-	retranslator := NewRetranslator(cfg)
+	retranslator := NewRetranslator(ctx, cfg)
 	retranslator.Start()
 	time.Sleep(time.Second * 2)
 	retranslator.Close()
@@ -89,6 +92,7 @@ func TestLockRemoveMatchIDs(t *testing.T) {
 		t.Errorf("Sent IDs aren't match with removed IDs")
 	}
 
+	ctx := context.Background()
 	cfg := Config{
 		ChannelSize:    512,
 		ConsumerCount:  2,
@@ -100,7 +104,7 @@ func TestLockRemoveMatchIDs(t *testing.T) {
 		Sender:         sender,
 	}
 
-	retranslator := NewRetranslator(cfg)
+	retranslator := NewRetranslator(ctx, cfg)
 	retranslator.Start()
 	time.Sleep(time.Second * 2)
 	retranslator.Close()
@@ -121,6 +125,7 @@ func TestLockUnlock(t *testing.T) {
 	repo.EXPECT().Remove(gomock.Any()).Times(0)
 	repo.EXPECT().Unlock(gomock.Any()).Times(5)
 
+	ctx := context.Background()
 	cfg := Config{
 		ChannelSize:    512,
 		ConsumerCount:  2,
@@ -132,7 +137,7 @@ func TestLockUnlock(t *testing.T) {
 		Sender:         sender,
 	}
 
-	retranslator := NewRetranslator(cfg)
+	retranslator := NewRetranslator(ctx, cfg)
 	retranslator.Start()
 	time.Sleep(time.Second * 2)
 	retranslator.Close()
@@ -162,6 +167,7 @@ func TestLockUnlockMatchIDs(t *testing.T) {
 		t.Errorf("Sent IDs aren't match with unlocked IDs")
 	}
 
+	ctx := context.Background()
 	cfg := Config{
 		ChannelSize:    512,
 		ConsumerCount:  2,
@@ -173,7 +179,7 @@ func TestLockUnlockMatchIDs(t *testing.T) {
 		Sender:         sender,
 	}
 
-	retranslator := NewRetranslator(cfg)
+	retranslator := NewRetranslator(ctx, cfg)
 	retranslator.Start()
 	time.Sleep(time.Second * 2)
 	retranslator.Close()
